@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="simplex.js"></script>
+    <script>
+      
+      // heap for asm.js
+      var heap = new ArrayBuffer(6^2 * 4);
+
+      // order: X, Y, S1, S2, S3
+      var f = new Float32Array(heap, 0, 6);
+      f[0] = 0; f[1] = 0; f[2] = -0; f[3] = 0.5; f[4]=0; f[5]= -0.5;
+
+      var C = new Float32Array(heap, 6);
+      
+      // X
+      C[0]= 3; C[1]= 0; C[2]= 0; C[3]= 0; C[4]= 0; C[5]= -1; 
+      // Y
+      C[1*6+0]= 3; C[1*6+1]= 0; C[1*6+2]= 0; C[1*6+3]= -0.5; C[1*6+4]= 0; C[1*6+5]= -0.5; 
+      // S1
+      C[2*6+0]= 0; C[2*6+1]= 0; C[2*6+2]= 0; C[2*6+3]= 0; C[2*6+4]= 0; C[2*6+5]= 0; 
+      // S2
+      C[3*6+0]= 2; C[3*6+1]= 0; C[3*6+2]= 0; C[3*6+3]= 0; C[3*6+4]= 0; C[3*6+5]= -1; 
+
+      var s = new SimplexModule(window, {}, heap);
+      console.log(s.solve());
+    </script>
+  </head>
+</html>
