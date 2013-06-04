@@ -9,4 +9,7 @@ var C = [[3,0,0,0,0,-1],
 	];
 var heap = SimplexModule.setup(f,C);
 var s = SimplexModule(window, {}, heap);
-console.log(s.solve());
+
+if(s.solve()) { 
+    console.log('TODO: print') ;
+}
