@@ -259,7 +259,23 @@ SimplexModule.print = function(heap) {
     
     var varcnt= HI[0];
     var start_idx= Math.pow(varcnt+1, 2);
+ 
+    console.log("optimal solution found:");
     for (var i = 0; i < varcnt; i++) {
 	console.log('variable', i, '=', HF[start_idx+i]);
     }
+}
+
+SimplexModule.get_solution = function(heap) {
+    var HI = new Int32Array(heap);
+    var HF = new Float32Array(heap);
+    
+    var varcnt= HI[0];
+    var start_idx= Math.pow(varcnt+1, 2);
+
+    var result = new Array(varcnt+1);
+    for (var i = 0; i < varcnt; i++) {
+	result[i] = HF[start_idx+i];
+    }
+    return result;
 }
