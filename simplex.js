@@ -5,9 +5,12 @@ function SimplexModule(stdlib, foreign, heap) {
 
     var sqrt = stdlib.Math.sqrt;
     var imul = stdlib.Math.imul;
+    var pow = stdlib.Math.pow;
     var HEAP32F = new stdlib.Float32Array(heap);
     var HEAP32I = new stdlib.Int32Array(heap);
     var varcnt= 0, rowcnt= 0, rowlen= 0;
+    var ans_idx= 0;
+
 
     // console.log(HEAP32F);
     function getf(i) {
@@ -19,22 +22,21 @@ function SimplexModule(stdlib, foreign, heap) {
 	return +HEAP32F[1];
     }
 
-    function getc(i, rowlen) {
-	i= i|0; rowlen= rowlen|0;
+    function getc(i) {
+	i= i|0;
 	// console.log("getc", 2+rowlen+i);	
 	return +HEAP32F[2+rowlen+i << 2 >> 2];
     }
 
-    function getrc(r, i, rowlen) {
+    function getrc(r, i) {
 	r= r|0; 
 	i= i|0; 
-	rowlen= rowlen|0;
-	return +getc(imul(r, rowlen) + i|0, rowlen);
+	return +getc(imul(r, rowlen) + i|0);
     }
 
-    function getrb(r, rowlen) {
-	r= r|0; rowlen= rowlen|0;
-	return +getc(imul(r, rowlen)-1|0, rowlen);
+    function getrb(r) {
+	r= r|0;
+	return +getc(imul(r, rowlen)-1|0);
     }
 
 
@@ -74,6 +76,19 @@ function SimplexModule(stdlib, foreign, heap) {
     }
 
 
+
+
+    function get_answer(x) {
+	x= x|0;
+	return +HEAP32F[ans_idx+x << 2 >> 2];
+    }
+    function set_answer(x, ans) {
+	x= x|0; ans= +ans;
+	HEAP32F[ans_idx+x << 2 >> 2]= +ans;
+	return 0|0;
+    }
+
+
     /**
      * Solves a simplex optimization problem presented in basic feasible solved form. 
      * Returns 1 if successful, 0 otherwise.
@@ -95,6 +110,8 @@ function SimplexModule(stdlib, foreign, heap) {
 	varcnt= (HEAP32I[0])|0;
 	rowcnt= (varcnt)|0;
 	rowlen= (varcnt+1)|0;
+	ans_idx= imul(rowlen, rowlen)|0;
+
 
 	for(; (i|0) < (varcnt|0); i=(i+1)|0) {
 	    if (+getf(i|0) < +0)
@@ -108,7 +125,7 @@ function SimplexModule(stdlib, foreign, heap) {
 	// console.log("entry variable", enterIdx);
 
 	for(; (j|0) < (rowcnt|0); j=(j+1)|0) {
-	    aij = +getrc(j, i, rowlen);
+	    aij = +getrc(j, i);
 	    // console.log(j, i, aij);
 	    if (aij < +0)
 		break;
@@ -119,10 +136,10 @@ function SimplexModule(stdlib, foreign, heap) {
 
 	for(j=0; (j|0) < (rowcnt|0); j=(j+1)|0) {
 	    // aij = +getf(imul(j+1, rowlen) + i + 1|0);
-	    aij = +getrc(j, enterIdx, rowlen);
+	    aij = +getrc(j, enterIdx);
 	    // console.log("j (row)", j, "aij", aij);
 	    if (+aij < +0) {
-		bi = +getrb(j, rowlen);
+		bi = +getrb(j);
 		// console.log(j, " bi: ", bi);
 		tmp = +((-1.0 * +bi) / +aij);
 		// console.log("aij < 0 at", j, "aij: ", aij, "-b/aij: ", tmp);
@@ -136,7 +153,7 @@ function SimplexModule(stdlib, foreign, heap) {
 
 
 	// assign the entering constraint
-	aij = +getrc(exitIdx, enterIdx, rowlen);
+	aij = +getrc(exitIdx, enterIdx);
 	setrb(enterIdx, rowlen, exitVal);
 	for(k=0; (k|0) < (varcnt|0); k=(k+1)|0) {
 	    // console.log('k', k);
@@ -145,7 +162,7 @@ function SimplexModule(stdlib, foreign, heap) {
 		setrc(exitIdx, k, rowlen, 0.0);
 		continue;
 	    }
-	    tmp= +(-1.0 * getrc(exitIdx, k, rowlen));
+	    tmp= +(-1.0 * getrc(exitIdx, k));
 	    if ((k|0) == (exitIdx|0))
 		tmp = +(tmp + 1.0);
 	    // console.log('-bi', tmp, 'aij', aij);
@@ -153,22 +170,17 @@ function SimplexModule(stdlib, foreign, heap) {
 	    setrc(exitIdx, k, rowlen, 0.0);
 	}
 
-	// console.log('self test', getrc(enterIdx, enterIdx, rowlen));
-	// console.log('exit test', getrc(enterIdx, exitIdx, rowlen));
-
-
 
 	// fix f with new constraint
 	multiplier= +getf(enterIdx);
 	// console.log('multiplier', multiplier);
 	setf(enterIdx, 0.0);
 
-	setfb(+getfb() + multiplier * getrb(enterIdx, rowlen));
+	setfb(+getfb() + multiplier * getrb(enterIdx));
 	// console.log('fb', getfb());
 
 	for(k=0; (k|0) < (varcnt|0); k=(k+1)|0) {
-	    // console.log('k', k, 'getf(k)', getf(k), 'getrc(enterIdx, k, rowlen)', getrc(enterIdx, k, rowlen));
-	    setf(k, +getf(k) + multiplier * getrc(enterIdx, k, rowlen));
+	    setf(k, +getf(k) + multiplier * getrc(enterIdx, k));
 	    // console.log('new f for k: ', k, getf(k));
 	}
 
@@ -177,23 +189,23 @@ function SimplexModule(stdlib, foreign, heap) {
 	    if ((k|0) == (enterIdx|0))
 		continue;
 	    
-	    multiplier= +getrc(k, enterIdx, rowlen);
+	    multiplier= +getrc(k, enterIdx);
 	    // console.log('k', k, 'multiplier', multiplier);
 	    if (+multiplier == 0.0)
 		continue;
 	    setrc(k, enterIdx, rowlen, 0.0);
 
 	    // console.log('setrb setting k', k
-	    // 		, 'current val', getrb(k, rowlen)
-	    // 		, 'adding', multiplier * getrb(enterIdx, rowlen)
+	    // 		, 'current val', getrb(k)
+	    // 		, 'adding', multiplier * getrb(enterIdx)
 	    // 	       );
-	    setrb(k, rowlen, +getrb(k, rowlen) + multiplier * getrb(enterIdx, rowlen));
+	    setrb(k, rowlen, +getrb(k) + multiplier * getrb(enterIdx));
 	    for(l=0; (l|0) < (varcnt|0); l=(l+1)|0) {
 		// console.log('setting k l', k, l
-		// 	    , 'current val', getrc(k, l, rowlen)
-		// 	    , 'adding', multiplier * getrc(enterIdx, l, rowlen)
+		// 	    , 'current val', getrc(k, l)
+		// 	    , 'adding', multiplier * getrc(enterIdx, l)
 		// 	   );
-		setrc(k, l, rowlen, +getrc(k, l, rowlen) + multiplier * getrc(enterIdx, l, rowlen));
+		setrc(k, l, rowlen, +getrc(k, l) + multiplier * getrc(enterIdx, l));
 	    }
 	}
 
@@ -204,10 +216,20 @@ function SimplexModule(stdlib, foreign, heap) {
 
 
     function store_solution() {
-	var start_idx=0;
-	start_idx = stdlib.Math.pow(rowlen, 2);
-	// console.log(start_idx, HEAP32F[start_idx], HEAP32F);
+	var tmp=0.0, mult=0.0;
+	var i=0, j=0;
 	
+	// all non-basic variables are 0 by default
+	// now assign values to basic variables
+	
+	for (i=0|0; (i|0) < (rowcnt|0); i= (i+1)|0) {
+	    tmp = +getrb(i);
+	    for (j=0|0; (j|0) < (varcnt|0); j= (j+1)|0) {
+		mult= +getrc(i, j);
+		tmp= +(tmp + get_answer(j)*mult);
+	    }
+	    set_answer(i, tmp);
+	}
     };
 
     function simplex_solve() {};
@@ -229,3 +251,14 @@ SimplexModule.setup = function(f, C) {
 	h.set(C[i], (f.length)*(i+1) + 1);
     return heap;
 };
+
+SimplexModule.print = function(heap) {
+    var HI = new Int32Array(heap);
+    var HF = new Float32Array(heap);
+    
+    var varcnt= HI[0];
+    var start_idx= Math.pow(varcnt+1, 2);
+    for (var i = 0; i < varcnt; i++) {
+	console.log('variable', i, '=', HF[start_idx+i]);
+    }
+}

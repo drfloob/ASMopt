@@ -11,5 +11,5 @@ var heap = SimplexModule.setup(f,C);
 var s = SimplexModule(window, {}, heap);
 
 if(s.solve()) { 
-    console.log('TODO: print') ;
+    SimplexModule.print(heap);
 }
