@@ -155,6 +155,7 @@ function SimplexModule(stdlib, foreign, heap) {
 	// assign the entering constraint
 	aij = +getrc(exitIdx, enterIdx);
 	setrb(enterIdx, rowlen, exitVal);
+	setrb(exitIdx, rowlen, 0.0);
 	for(k=0; (k|0) < (varcnt|0); k=(k+1)|0) {
 	    // console.log('k', k);
 	    if ((k|0) == (enterIdx|0)) {
